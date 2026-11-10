@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Sparkles } from 'lucide-react';
+import { Heart, Sparkles, ShieldCheck } from 'lucide-react';
 
 interface ResultScreenProps {
   outcome: 'accepted' | 'declined';
@@ -20,7 +20,6 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ outcome }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Floating rising hearts generator (optimized count for mobile GPUs)
   const floatingHearts = useMemo(() => {
     const count = isMobile ? 10 : 18;
     return Array.from({ length: count }).map((_, i) => ({
@@ -74,12 +73,12 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ outcome }) => {
           role="region"
           aria-label="Acceptance response"
         >
-          {/* Subtle glowing heart emblem */}
+          {/* Subtle glowing heart emblem with trust badge */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: [0, 1.15, 1] }}
             transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
-            className="mb-4 sm:mb-6 relative"
+            className="mb-4 sm:mb-5 relative"
           >
             <div className="absolute inset-0 rounded-full bg-pink-500/30 blur-lg sm:blur-xl animate-pulse" />
             <div className="relative p-3 sm:p-3.5 rounded-full bg-rose-500/20 border border-rose-400/30 shadow-xl shadow-rose-950/60">
@@ -92,7 +91,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ outcome }) => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.9 }}
-            className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-glow text-white mb-3"
+            className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight text-glow text-white mb-2 sm:mb-3"
           >
             Thank you, Vichu <span className="inline-block text-rose-400">❤️</span>
           </motion.h1>
@@ -101,11 +100,24 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ outcome }) => {
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, duration: 0.9 }}
-            className="font-serif italic text-base sm:text-lg md:text-xl text-pink-100/90 font-light tracking-wide max-w-[280px] sm:max-w-xs"
+            transition={{ delay: 0.5, duration: 0.9 }}
+            className="font-serif italic text-lg sm:text-xl md:text-2xl text-pink-100/90 font-light tracking-wide max-w-[280px] sm:max-w-xs mb-5"
           >
             "Let's take it one day at a time."
           </motion.p>
+
+          {/* Sincere Promise Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.9 }}
+            className="glass-panel px-4 py-3 sm:px-5 sm:py-3.5 rounded-2xl border border-pink-400/25 shadow-xl max-w-xs sm:max-w-sm flex items-start gap-2.5 text-left"
+          >
+            <ShieldCheck className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <p className="text-xs sm:text-sm font-sans text-pink-100/85 leading-relaxed">
+              I promise I will never break your trust. I will protect your heart, be patient with you, and prove to you every single day that you made the right choice. 🤞❤️
+            </p>
+          </motion.div>
         </motion.main>
       </div>
     );

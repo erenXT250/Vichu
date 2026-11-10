@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart } from 'lucide-react';
+import { Heart, ShieldCheck } from 'lucide-react';
 
 interface ProposalCardProps {
   onSelectYes: () => void;
@@ -8,39 +8,39 @@ interface ProposalCardProps {
   onInteraction: () => void;
 }
 
-// Concise playful labels guaranteed to fit neatly inside the fixed button width
+// Heartfelt, pleading labels that address trust issues and promise safety
 const PLAYFUL_NO_LABELS = [
   'NO 😭',
-  'Are you sure? 🥺',
-  'Think again! 🌸',
-  'Nice try! 🙈',
-  'Too fast! 🏃‍♀️',
-  'Look at YES! 👉',
-  'Still trying? 😂',
-  'I believe in us! ✨',
-  'Click YES! 💖',
-  'Never! 🥺',
-  'Error 404 🚫',
-  'Come on! 🙈',
-  'Give a chance! 🥺',
-  'YES is waiting! 💕',
-  'Cant catch me! 🏃‍♂️',
-  'Destiny says YES! ✨',
-  'Pretty please? 🥺',
+  'Please? 🥺',
+  'I promise! 🤞',
+  'Won\'t break trust ❤️',
+  'Trust me once? 🥺',
+  'I\'ll protect you 🌸',
+  'Give a chance 🙈',
+  'I won\'t hurt you 🥺',
+  'Never let down 🤞',
+  'Just one chance? 💖',
+  'Take your time 🥺',
+  'I\'m here to stay ❤️',
+  'Please Vichu? 🥺👉👈',
+  'Your heart is safe 🌹',
+  'Believe in me? 🥺',
+  'Pleeease? 🥺❤️',
 ];
 
+// Deeply reassuring, comforting messages addressing her trust issues as she chases NO
 const PLAYFUL_HINTS = [
-  'Catch me if you can ✨',
-  'Hint: NO is disabled by fate 💕',
-  'The universe strongly recommends YES 🙈',
-  'You really thought you could click NO? 😂',
-  'Resistance is impossible ❤️',
-  'All roads lead to YES 🌹',
+  'I know you have trust issues... and that\'s okay. I\'ll earn your trust every day 🥺',
+  'I swear with all my heart, I will never break your trust 🤞❤️',
+  'You don\'t have to rush into anything... we can take it one tiny step at a time 🌸',
+  'I\'ll be the one person who proves you right for believing again 💕',
+  'I promise I will never walk away or take you for granted, Vichu 🥺',
+  'Please give me just one chance to show you that you are safe with me 🥺👉👈',
+  'Your heart, your feelings, and your trust mean the world to me 🌹',
 ];
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
-// Tactile mobile haptic feedback
 const triggerHaptic = (pattern: number | number[] = 20) => {
   if (typeof window !== 'undefined' && 'vibrate' in navigator) {
     try {
@@ -72,14 +72,13 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
     return PLAYFUL_HINTS[index];
   };
 
-  // Re-clamp fixed button on resize or orientation change
   useEffect(() => {
     const handleResize = () => {
       setNoFixedPos((current) => {
         if (!current) return null;
         const winW = window.innerWidth;
         const winH = window.innerHeight;
-        const btnW = winW < 640 ? 130 : 150;
+        const btnW = winW < 640 ? 140 : 160;
         const btnH = 48;
 
         const padLeft = 16;
@@ -107,43 +106,37 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
     };
   }, []);
 
-  // Strict mathematical boundary calculation for dodging
   const dodgeButton = useCallback(() => {
     onInteraction();
     triggerHaptic(18);
 
     const winW = window.innerWidth;
     const winH = window.innerHeight;
-    const btnW = winW < 640 ? 130 : 150;
+    const btnW = winW < 640 ? 140 : 160;
     const btnH = 48;
 
-    // Strict screen boundary padding (ensures button never clips viewport edges)
     const padLeft = 16;
     const padRight = 16;
-    const padTop = Math.max(70, Math.round(winH * 0.1)); // Keep clear of top music button
-    const padBottom = Math.max(75, Math.round(winH * 0.12)); // Keep clear of bottom home indicator
+    const padTop = Math.max(70, Math.round(winH * 0.1));
+    const padBottom = Math.max(75, Math.round(winH * 0.12));
 
     const screenMinX = padLeft;
     const screenMaxX = Math.max(padLeft, winW - btnW - padRight);
     const screenMinY = padTop;
     const screenMaxY = Math.max(padTop, winH - btnH - padBottom);
 
-    // Bounding box of YES button to avoid landing directly on top of it
     const yesRect = yesButtonRef.current?.getBoundingClientRect();
 
-    // If this is the very first dodge, record the initial resting position
     if (noFixedPos === null && noButtonRef.current) {
       const startRect = noButtonRef.current.getBoundingClientRect();
       setInitialRect({ left: startRect.left, top: startRect.top });
     }
 
-    // Determine candidate search area
     let searchMinX = screenMinX;
     let searchMaxX = screenMaxX;
     let searchMinY = screenMinY;
     let searchMaxY = screenMaxY;
 
-    // On large desktop screens, keep dodging pleasantly around the center card
     if (winW > 768) {
       const centerX = winW / 2;
       const centerY = winH / 2;
@@ -163,10 +156,8 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       const candX = searchMinX + Math.random() * Math.max(10, searchMaxX - searchMinX);
       const candY = searchMinY + Math.random() * Math.max(10, searchMaxY - searchMinY);
 
-      // Check distance from current position so jump is noticeable
       const dist = Math.hypot(candX - currentX, candY - currentY);
 
-      // Check collision with YES button
       const overlapsYes =
         yesRect &&
         candX < yesRect.right + 12 &&
@@ -182,7 +173,6 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       attempts++;
     }
 
-    // Strictly clamp within absolute screen bounds
     const finalX = clamp(Math.round(targetX), screenMinX, screenMaxX);
     const finalY = clamp(Math.round(targetY), screenMinY, screenMaxY);
 
@@ -190,14 +180,12 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
     setDodgeCount((prev) => prev + 1);
   }, [initialRect?.left, initialRect?.top, noFixedPos, onInteraction]);
 
-  // Desktop hover trigger
   const handlePointerEnterNo = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse') {
       dodgeButton();
     }
   };
 
-  // Mobile pointer down (instant reaction on touch)
   const handlePointerDownNo = (e: React.PointerEvent) => {
     if (e.pointerType === 'touch') {
       e.preventDefault();
@@ -205,13 +193,11 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
     }
   };
 
-  // Mobile touchstart fallback
   const handleTouchStartNo = (e: React.TouchEvent) => {
     e.preventDefault();
     dodgeButton();
   };
 
-  // Click interceptor
   const handleClickNo = (e: React.MouseEvent) => {
     e.preventDefault();
     dodgeButton();
@@ -235,15 +221,16 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
       role="region"
       aria-label="Proposal"
     >
-      {/* Decorative delicate heart accent */}
+      {/* Decorative delicate heart accent with trust shield */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.7 }}
-        className="mb-3 sm:mb-4 inline-flex items-center justify-center"
+        className="mb-3 sm:mb-4 inline-flex items-center justify-center gap-2"
       >
-        <span className="p-2 sm:p-2.5 rounded-full bg-rose-500/10 border border-rose-400/20 shadow-lg shadow-rose-950/50">
+        <span className="p-2 sm:p-2.5 rounded-full bg-rose-500/10 border border-rose-400/20 shadow-lg shadow-rose-950/50 flex items-center gap-1.5">
           <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-rose-400 fill-rose-400/30 animate-pulse-subtle" />
+          <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-300" />
         </span>
       </motion.div>
 
@@ -262,16 +249,26 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.8 }}
-        className="font-serif italic text-lg sm:text-xl md:text-2xl text-pink-100/90 font-light tracking-wide mb-8 sm:mb-10 max-w-[280px] sm:max-w-xs"
+        className="font-serif italic text-lg sm:text-xl md:text-2xl text-pink-100/90 font-light tracking-wide mb-2 max-w-[280px] sm:max-w-xs"
       >
         "Will you give me a chance?"
+      </motion.p>
+
+      {/* Tender Trust Reassurance Subtitle */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.85 }}
+        transition={{ delay: 0.65, duration: 0.9 }}
+        className="text-xs sm:text-sm font-sans text-pink-200/75 max-w-[290px] sm:max-w-xs mb-8 leading-relaxed font-light"
+      >
+        I know trust takes time, and I promise I won't ever break yours. Please? 🥺
       </motion.p>
 
       {/* Buttons Container */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.65, duration: 0.7 }}
+        transition={{ delay: 0.75, duration: 0.7 }}
         className="relative flex items-center justify-center gap-3 sm:gap-5 w-full pt-1"
       >
         {/* YES BUTTON */}
@@ -291,10 +288,10 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
           </span>
         </motion.button>
 
-        {/* Resting Placeholder when NO is dodging (keeps YES from jumping) */}
+        {/* Resting Placeholder when NO is dodging */}
         {noFixedPos !== null && (
           <div
-            className="w-[130px] sm:w-[150px] min-h-[48px] opacity-0 pointer-events-none"
+            className="w-[140px] sm:w-[160px] min-h-[48px] opacity-0 pointer-events-none"
             aria-hidden="true"
           />
         )}
@@ -311,7 +308,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
             whileTap={{ scale: 0.94 }}
             type="button"
             aria-label="No"
-            className="w-[130px] sm:w-[150px] min-h-[48px] max-w-[130px] sm:max-w-[150px] py-3 rounded-full glass-panel border border-pink-300/25 text-pink-200/90 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition-colors duration-200 cursor-pointer shadow-lg shadow-black/40 touch-none select-none overflow-hidden"
+            className="w-[140px] sm:w-[160px] min-h-[48px] max-w-[140px] sm:max-w-[160px] py-3 rounded-full glass-panel border border-pink-300/25 text-pink-200/90 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition-colors duration-200 cursor-pointer shadow-lg shadow-black/40 touch-none select-none overflow-hidden"
           >
             <span className="relative flex items-center justify-center gap-1 font-sans select-none whitespace-nowrap overflow-hidden text-ellipsis px-2">
               {getNoButtonLabel()}
@@ -320,7 +317,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         )}
       </motion.div>
 
-      {/* Fixed NO BUTTON once dodging is triggered (Guaranteed inside screen boundaries) */}
+      {/* Fixed NO BUTTON once dodging is triggered */}
       {noFixedPos !== null && (
         <motion.button
           ref={noButtonRef}
@@ -350,7 +347,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
           }}
           type="button"
           aria-label="No"
-          className="w-[130px] sm:w-[150px] min-h-[48px] max-w-[130px] sm:max-w-[150px] py-3 rounded-full glass-panel border border-pink-300/25 text-pink-200/90 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition-colors duration-200 cursor-pointer shadow-xl shadow-black/50 touch-none select-none overflow-hidden"
+          className="w-[140px] sm:w-[160px] min-h-[48px] max-w-[140px] sm:max-w-[160px] py-3 rounded-full glass-panel border border-pink-300/25 text-pink-200/90 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition-colors duration-200 cursor-pointer shadow-xl shadow-black/50 touch-none select-none overflow-hidden"
         >
           <span className="relative flex items-center justify-center gap-1 font-sans select-none whitespace-nowrap overflow-hidden text-ellipsis px-2">
             {getNoButtonLabel()}
@@ -358,18 +355,18 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
         </motion.button>
       )}
 
-      {/* Playful hint text */}
+      {/* Deeply comforting, begging & reassuring message below buttons */}
       <AnimatePresence mode="wait">
         {dodgeCount > 0 && (
           <motion.div
             key={dodgeCount}
-            initial={{ opacity: 0, y: 6, scale: 0.95 }}
-            animate={{ opacity: 0.85, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="mt-6 sm:mt-8 text-xs font-serif italic text-pink-300/80 tracking-wider px-2"
+            initial={{ opacity: 0, y: 6, scale: 0.96 }}
+            animate={{ opacity: 0.95, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+            transition={{ duration: 0.25 }}
+            className="mt-6 sm:mt-8 text-xs sm:text-sm font-sans text-pink-200/90 tracking-wide px-4 py-2 rounded-2xl glass-panel border border-pink-400/20 shadow-md max-w-[320px] sm:max-w-sm leading-relaxed"
           >
-            ({getHint()})
+            {getHint()}
           </motion.div>
         )}
       </AnimatePresence>
