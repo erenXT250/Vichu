@@ -1,184 +1,241 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Music } from 'lucide-react';
 
 interface AudioControllerProps {
   hasUserInteracted: boolean;
 }
 
+declare global {
+  interface Window {
+    onYouTubeIframeAPIReady?: () => void;
+    YT?: any;
+  }
+}
+
+const YOUTUBE_VIDEO_ID = '_MYpI4ZQooE'; // "Karthaave Nee" from Christian Brothers
+const START_SECONDS = 34; // Start from 0:34
+
 export const AudioController: React.FC<AudioControllerProps> = ({ hasUserInteracted }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [ytReady, setYtReady] = useState<boolean>(false);
+
+  const playerRef = useRef<any>(null);
+  const hasSeekedInitialRef = useRef<boolean>(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
-  const intervalRef = useRef<number | null>(null);
-  const isInitializedRef = useRef<boolean>(false);
+  const synthIntervalRef = useRef<number | null>(null);
 
-  // Initialize romantic ambient music generator using Web Audio API
-  const initAudio = () => {
+  // Initialize YouTube IFrame API
+  useEffect(() => {
+    if (!document.getElementById('youtube-iframe-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+    }
+
+    const initPlayer = () => {
+      if (window.YT && window.YT.Player && !playerRef.current) {
+        try {
+          playerRef.current = new window.YT.Player('vichu-yt-audio-player', {
+            height: '1',
+            width: '1',
+            videoId: YOUTUBE_VIDEO_ID,
+            playerVars: {
+              autoplay: 0,
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              loop: 1,
+              playlist: YOUTUBE_VIDEO_ID,
+              modestbranding: 1,
+              playsinline: 1,
+              start: START_SECONDS,
+              origin: window.location.origin,
+            },
+            events: {
+              onReady: (event: any) => {
+                setYtReady(true);
+                event.target.setVolume(85);
+                event.target.seekTo(START_SECONDS, true);
+              },
+              onStateChange: (event: any) => {
+                if (window.YT) {
+                  if (event.data === window.YT.PlayerState.PLAYING) {
+                    setIsPlaying(true);
+                  } else if (event.data === window.YT.PlayerState.PAUSED) {
+                    setIsPlaying(false);
+                  } else if (event.data === window.YT.PlayerState.ENDED) {
+                    // Loop from 0:34
+                    try {
+                      event.target.seekTo(START_SECONDS, true);
+                      event.target.playVideo();
+                    } catch {}
+                  }
+                }
+              },
+            },
+          });
+        } catch {
+          // Fallback to Web Audio if blocked
+        }
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      initPlayer();
+    } else {
+      window.onYouTubeIframeAPIReady = initPlayer;
+    }
+
+    return () => {
+      if (playerRef.current && playerRef.current.destroy) {
+        try {
+          playerRef.current.destroy();
+        } catch {}
+      }
+    };
+  }, []);
+
+  // Web Audio Fallback Synthesizer
+  const initSynth = () => {
     if (audioCtxRef.current) return;
-
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
-
       const ctx = new AudioCtx();
       audioCtxRef.current = ctx;
-
       const masterGain = ctx.createGain();
       masterGain.gain.setValueAtTime(0.001, ctx.currentTime);
       masterGain.connect(ctx.destination);
       masterGainRef.current = masterGain;
-
-      isInitializedRef.current = true;
-    } catch {
-      // AudioContext not supported or disabled - gracefully ignore
-    }
+    } catch {}
   };
 
-  // Play a gentle, dreamy piano-like note
-  const playTone = (freq: number, startTime: number, duration: number, volume: number = 0.08) => {
+  const playSynthTone = (freq: number, startTime: number, duration: number, volume: number = 0.08) => {
     const ctx = audioCtxRef.current;
     const master = masterGainRef.current;
     if (!ctx || !master) return;
 
     const osc = ctx.createOscillator();
-    const oscHarmonic = ctx.createOscillator();
-    const noteGain = ctx.createGain();
     const filter = ctx.createBiquadFilter();
+    const noteGain = ctx.createGain();
 
-    // Warm lowpass filter for romantic softness
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(1400, startTime);
     filter.frequency.exponentialRampToValueAtTime(450, startTime + duration);
 
-    // Fundamental note (sine wave)
     osc.type = 'sine';
     osc.frequency.setValueAtTime(freq, startTime);
 
-    // Subtle gentle harmonic (warm triangle wave)
-    oscHarmonic.type = 'triangle';
-    oscHarmonic.frequency.setValueAtTime(freq * 2, startTime);
-
-    // Piano-style envelope: instantaneous soft attack, natural exponential decay
     noteGain.gain.setValueAtTime(0.0001, startTime);
     noteGain.gain.linearRampToValueAtTime(volume, startTime + 0.04);
     noteGain.gain.exponentialRampToValueAtTime(volume * 0.4, startTime + 0.5);
     noteGain.gain.exponentialRampToValueAtTime(0.00001, startTime + duration);
 
     osc.connect(filter);
-    oscHarmonic.connect(filter);
     filter.connect(noteGain);
     noteGain.connect(master);
 
     osc.start(startTime);
-    oscHarmonic.start(startTime);
     osc.stop(startTime + duration + 0.1);
-    oscHarmonic.stop(startTime + duration + 0.1);
   };
 
-  // Chords progression for romantic, dreamy melody (Db Major, Bbm9, GbM7, Ab)
-  const CHORD_PROGRESSION = [
-    // Db Major 7: Db4, F4, Ab4, C5, F5
-    [277.18, 349.23, 415.3, 523.25, 698.46],
-    // Bb minor 9: Bb3, F4, Ab4, C5, Db5
-    [233.08, 349.23, 415.3, 523.25, 554.37],
-    // Gb Major 7: Gb3, Db4, F4, Bb4, Db5
-    [185.0, 277.18, 349.23, 466.16, 554.37],
-    // Ab suspended 4 to Ab: Ab3, Eb4, Ab4, C5, Eb5
-    [207.65, 311.13, 415.3, 523.25, 622.25],
-  ];
-
-  const startMusicLoop = () => {
+  const startSynthLoop = () => {
+    initSynth();
     const ctx = audioCtxRef.current;
     const master = masterGainRef.current;
     if (!ctx || !master) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
 
-    if (ctx.state === 'suspended') {
-      ctx.resume();
-    }
-
-    // Fade in master volume
     master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
     master.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 1.8);
 
-    let chordIndex = 0;
-    const chordDuration = 4.2; // seconds per chord
+    const CHORDS = [
+      [277.18, 349.23, 415.3, 523.25],
+      [233.08, 349.23, 415.3, 523.25],
+      [185.0, 277.18, 349.23, 466.16],
+      [207.65, 311.13, 415.3, 523.25],
+    ];
 
-    const scheduleNextChord = () => {
+    let chordIdx = 0;
+    const tick = () => {
       const now = ctx.currentTime;
-      const notes = CHORD_PROGRESSION[chordIndex % CHORD_PROGRESSION.length];
-
-      // Bass note
-      playTone(notes[0], now, 3.8, 0.12);
-
-      // Delicate arpeggiated romantic chimes
+      const notes = CHORDS[chordIdx % CHORDS.length];
+      playSynthTone(notes[0], now, 3.8, 0.12);
       for (let i = 1; i < notes.length; i++) {
-        const delay = 0.35 * i + Math.random() * 0.08;
-        playTone(notes[i], now + delay, 3.2, 0.08);
+        playSynthTone(notes[i], now + 0.35 * i, 3.2, 0.08);
       }
-
-      // Occasional sweet high bell chime
-      if (Math.random() > 0.4) {
-        const topNote = notes[notes.length - 1] * (Math.random() > 0.5 ? 1.5 : 1.25);
-        playTone(topNote, now + 2.0, 2.6, 0.04);
-      }
-
-      chordIndex++;
+      chordIdx++;
     };
 
-    // Schedule immediately then loop
-    scheduleNextChord();
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = window.setInterval(scheduleNextChord, chordDuration * 1000);
-
+    tick();
+    if (synthIntervalRef.current) clearInterval(synthIntervalRef.current);
+    synthIntervalRef.current = window.setInterval(tick, 4200);
     setIsPlaying(true);
   };
 
-  const stopMusic = () => {
+  const stopSynth = () => {
     const ctx = audioCtxRef.current;
     const master = masterGainRef.current;
     if (master && ctx) {
       master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
-      master.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.6);
+      master.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
     }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (synthIntervalRef.current) {
+      clearInterval(synthIntervalRef.current);
+      synthIntervalRef.current = null;
     }
+  };
+
+  const playTrack = () => {
+    if (playerRef.current && typeof playerRef.current.playVideo === 'function') {
+      try {
+        if (!hasSeekedInitialRef.current) {
+          playerRef.current.seekTo(START_SECONDS, true);
+          hasSeekedInitialRef.current = true;
+        }
+        playerRef.current.playVideo();
+        setIsPlaying(true);
+        return;
+      } catch {}
+    }
+    startSynthLoop();
+  };
+
+  const pauseTrack = () => {
+    if (playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+      try {
+        playerRef.current.pauseVideo();
+      } catch {}
+    }
+    stopSynth();
     setIsPlaying(false);
   };
 
-  // Toggle button handler
   const handleToggle = () => {
-    if (!audioCtxRef.current) {
-      initAudio();
-    }
-    const ctx = audioCtxRef.current;
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {});
-    }
-
     if (isPlaying && !isMuted) {
       setIsMuted(true);
-      stopMusic();
+      pauseTrack();
     } else {
       setIsMuted(false);
-      startMusicLoop();
+      playTrack();
     }
   };
 
-  // Autoplay on first user interaction if not explicitly muted
   useEffect(() => {
     if (hasUserInteracted && !isPlaying && !isMuted) {
-      initAudio();
-      startMusicLoop();
+      playTrack();
     }
-  }, [hasUserInteracted, isMuted, isPlaying]);
+  }, [hasUserInteracted, isMuted, isPlaying, ytReady]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      stopSynth();
       if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
         audioCtxRef.current.close().catch(() => {});
       }
@@ -186,35 +243,49 @@ export const AudioController: React.FC<AudioControllerProps> = ({ hasUserInterac
   }, []);
 
   return (
-    <div className="fixed top-4 right-4 z-50 pt-safe pr-safe pointer-events-auto">
-      <button
-        onClick={handleToggle}
-        type="button"
-        className="group relative flex items-center gap-2 px-3.5 py-2 rounded-full glass-panel border border-pink-400/20 text-pink-200/90 hover:text-pink-100 hover:border-pink-300/40 hover:bg-rose-950/40 active:scale-95 transition-all duration-300 shadow-lg shadow-black/40"
-        aria-label={isPlaying ? 'Mute romantic music' : 'Play romantic music'}
-        title={isPlaying ? 'Music: Playing' : 'Music: Paused'}
+    <>
+      {/* Hidden YouTube IFrame Audio Player */}
+      <div
+        className="fixed -top-96 -left-96 w-1 h-1 opacity-0 pointer-events-none overflow-hidden"
+        aria-hidden="true"
       >
-        <span className="relative flex h-2 w-2">
-          {isPlaying && (
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75" />
+        <div id="vichu-yt-audio-player" />
+      </div>
+
+      {/* Floating Music Toggle Button */}
+      <div className="fixed top-3 right-3 z-50 pt-safe pr-safe pointer-events-auto">
+        <button
+          onClick={handleToggle}
+          type="button"
+          className="group relative flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full glass-panel border border-pink-400/25 text-pink-200/90 hover:text-pink-100 hover:border-pink-300/40 hover:bg-rose-950/40 active:scale-95 transition-all duration-300 shadow-lg shadow-black/40"
+          aria-label={isPlaying ? 'Mute song' : 'Play song: Karthaave Nee'}
+          title="Karthaave Nee (Christian Brothers) — starts at 0:34"
+        >
+          <span className="relative flex h-2 w-2">
+            {isPlaying && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                isPlaying ? 'bg-rose-400' : 'bg-gray-500'
+              }`}
+            />
+          </span>
+
+          {isPlaying ? (
+            <Volume2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-300 animate-pulse" />
+          ) : (
+            <VolumeX className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-300/60" />
           )}
-          <span
-            className={`relative inline-flex rounded-full h-2 w-2 ${
-              isPlaying ? 'bg-pink-400' : 'bg-gray-500'
-            }`}
-          />
-        </span>
 
-        {isPlaying ? (
-          <Volume2 className="w-4 h-4 text-pink-300 animate-pulse" />
-        ) : (
-          <VolumeX className="w-4 h-4 text-pink-300/60" />
-        )}
-
-        <span className="text-xs font-serif italic tracking-wide text-pink-200/80 group-hover:text-pink-100">
-          {isPlaying ? 'Melody' : 'Music Off'}
-        </span>
-      </button>
-    </div>
+          <div className="flex items-center gap-1">
+            <Music className="w-3 h-3 text-pink-400/80" />
+            <span className="text-[11px] sm:text-xs font-serif italic tracking-wide text-pink-200/90 group-hover:text-pink-100 whitespace-nowrap">
+              {isPlaying ? 'Karthaave Nee 🎵' : 'Play Song 🎵'}
+            </span>
+          </div>
+        </button>
+      </div>
+    </>
   );
 };
