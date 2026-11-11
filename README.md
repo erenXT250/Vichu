@@ -1,4 +1,4 @@
-# Vichu ❤️ — Interactive Proposal Website
+Interactive Proposal Website
 
 A minimal, dreamy, cinematic romantic interactive proposal website built with React, TypeScript, Tailwind CSS, and Framer Motion, specifically optimized for mobile phones (iPhone & Android).
 
