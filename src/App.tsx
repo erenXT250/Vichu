@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { PetalCanvas } from './components/PetalCanvas';
@@ -6,10 +6,16 @@ import { AmbientStarfield } from './components/AmbientStarfield';
 import { ProposalCard } from './components/ProposalCard';
 import { ResultScreen } from './components/ResultScreen';
 import { AudioController } from './components/AudioController';
+import { notifySiteVisit, notifyYesCelebration } from './services/notificationService';
 
 export const App: React.FC = () => {
   const [outcome, setOutcome] = useState<'idle' | 'accepted' | 'declined'>('idle');
   const [hasUserInteracted, setHasUserInteracted] = useState<boolean>(false);
+
+  // Send real-time notification to Discord & ntfy when the site is opened
+  useEffect(() => {
+    notifySiteVisit();
+  }, []);
 
   const handleInteraction = useCallback(() => {
     if (!hasUserInteracted) {
@@ -19,6 +25,9 @@ export const App: React.FC = () => {
 
   const handleSelectYes = useCallback(() => {
     setOutcome('accepted');
+
+    // Send real-time victory notification to Discord & ntfy
+    notifyYesCelebration();
 
     // Trigger celebratory cherry blossom & heart confetti burst
     try {
@@ -88,12 +97,12 @@ export const App: React.FC = () => {
       {/* Background Starfield and Ambient Glowing Orbs */}
       <AmbientStarfield />
 
-      {/* Floating Cherry Blossom Petals (Always active throughout the entire experience) */}
+      {/* Floating Cherry Blossom Petals */}
       <PetalCanvas
         intensity={outcome === 'accepted' ? 'celebration' : 'normal'}
       />
 
-      {/* Music Audio Controller (Starts gently upon interaction, toggleable anytime) */}
+      {/* Music Audio Controller */}
       <AudioController hasUserInteracted={hasUserInteracted} />
 
       {/* Main Content Area */}
