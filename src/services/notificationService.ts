@@ -1,18 +1,21 @@
-// Notification Service for Discord Webhook & ntfy App
+// Notification Service for ntfy App and Secure Notifications
 
-const DISCORD_WEBHOOK_URL =
-  'https://discord.com/api/webhooks/1569965980040298578/sPqCi4Be6yd6AbO121a3QYo2MTxL1X9dhtAn2MHMQ-yPR06o2KPAz7maOWNQEAJBXXUo';
+// Discord webhook disabled to protect against public GitHub crawler bots.
+// To use Discord safely, use a webhook proxy or keep notifications on ntfy.
+const DISCORD_WEBHOOK_URL = '';
 
-// You can subscribe to this topic in the ntfy app on iOS or Android:
-export const NTFY_TOPIC = 'vichu-proposal-eren';
+// Subscribe to this private topic in the ntfy app (iOS / Android):
+export const NTFY_TOPIC = 'vichu-alert-eren-8f92a1';
 
-// Helper to send to Discord using FormData (avoids CORS preflight issues in browsers)
+// Helper to send to Discord (only if configured and safe)
 const sendToDiscord = async (content: string, embed?: {
   title?: string;
   description?: string;
   color?: number;
   fields?: { name: string; value: string; inline?: boolean }[];
 }) => {
+  if (!DISCORD_WEBHOOK_URL) return;
+
   try {
     const form = new FormData();
     const payload: { content: string; embeds?: any[] } = { content };
@@ -32,7 +35,6 @@ const sendToDiscord = async (content: string, embed?: {
       body: form,
     });
   } catch (err) {
-    // Non-blocking error handling
     console.warn('Discord notification error:', err);
   }
 };
@@ -58,7 +60,6 @@ const sendToNtfy = async (message: string, options: {
   }
 };
 
-// 1. When the website is opened
 let hasNotifiedOpen = false;
 export const notifySiteVisit = async () => {
   if (hasNotifiedOpen) return;
@@ -69,18 +70,16 @@ export const notifySiteVisit = async () => {
     const device = isMobile ? '📱 Mobile Device' : '💻 Desktop / Laptop';
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Discord alert
     sendToDiscord('👀 **Vichu opened the website!** ❤️', {
       title: 'Website Opened',
       description: 'Someone just opened the Vichu proposal website!',
-      color: 0xff7597, // Pink
+      color: 0xff7597,
       fields: [
         { name: 'Device', value: device, inline: true },
         { name: 'Time', value: timeStr, inline: true },
       ],
     });
 
-    // ntfy push notification
     sendToNtfy(`Vichu just opened your proposal website on ${device} at ${timeStr}!`, {
       title: '👀 Vichu Opened Website!',
       priority: 'high',
@@ -89,25 +88,21 @@ export const notifySiteVisit = async () => {
   } catch {}
 };
 
-// 2. When NO button is chased
 let lastDodgeSentTime = 0;
 export const notifyDodgeAttempt = async (attemptNumber: number, label: string) => {
   const now = Date.now();
-  // Throttle to avoid spamming if user taps 5 times in 1 second
   if (now - lastDodgeSentTime < 2500 && attemptNumber > 1) {
     return;
   }
   lastDodgeSentTime = now;
 
   try {
-    // Discord alert
     sendToDiscord(`🙈 **Vichu tried to click NO!** (Attempt #${attemptNumber})`, {
       title: 'NO Button Dodged 🏃‍♂️💨',
       description: `Button text: **"${label}"**\nShe tried to click NO, but it playfully jumped away!`,
-      color: 0xf59e0b, // Amber
+      color: 0xf59e0b,
     });
 
-    // ntfy push notification
     sendToNtfy(`She tried to click NO (Attempt #${attemptNumber}: "${label}"), but the button leaped away! 🏃‍♂️💨`, {
       title: '🙈 Vichu Tried Clicking NO!',
       priority: 'default',
@@ -116,23 +111,20 @@ export const notifyDodgeAttempt = async (attemptNumber: number, label: string) =
   } catch {}
 };
 
-// 3. When YES is clicked!
 export const notifyYesCelebration = async () => {
   try {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Discord alert
     sendToDiscord('🎉 **SHE SAID YES!** ❤️❤️❤️', {
       title: '🎊 Proposal Accepted! 🌹💍',
       description: '✨ **Vichu clicked YES!**\n\n"Thank you, Vichu ❤️ — Let\'s take it one day at a time."',
-      color: 0x22c55e, // Bright Green celebration
+      color: 0x22c55e,
       fields: [
         { name: 'Result', value: 'ACCEPTED 🙈❤️', inline: true },
         { name: 'Time', value: timeStr, inline: true },
       ],
     });
 
-    // ntfy push notification (urgent alert)
     sendToNtfy('🎉 SHE SAID YES! Vichu clicked YES and accepted your proposal! Congratulations! 🌹💍', {
       title: '🎉 SHE SAID YES! ❤️💍',
       priority: 'urgent',
