@@ -23,7 +23,7 @@ const getEndpoint = (): string => {
   }
 };
 
-// Dispatch encrypted alert using FormData
+// Dispatch encrypted alert using standard JSON payload
 const dispatchAlert = async (content: string, embed?: {
   title?: string;
   description?: string;
@@ -34,7 +34,6 @@ const dispatchAlert = async (content: string, embed?: {
     const endpoint = getEndpoint();
     if (!endpoint) return;
 
-    const form = new FormData();
     const payload: { content: string; embeds?: any[] } = { content };
     if (embed) {
       payload.embeds = [
@@ -45,11 +44,13 @@ const dispatchAlert = async (content: string, embed?: {
         },
       ];
     }
-    form.append('payload_json', JSON.stringify(payload));
 
     await fetch(endpoint, {
       method: 'POST',
-      body: form,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
   } catch (err) {
     console.warn('Notification error:', err);
